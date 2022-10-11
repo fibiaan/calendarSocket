@@ -30,7 +30,46 @@ module.exports = {
         )
         conn.closeConnections()
         res.json({
-            token
+            token,
+            user: result[0]
         })
     },
+
+
+    validateAuth: async (req, res, next) => {
+        if (req.headers.authorization) {
+            var token;
+            try {
+                token = req.headers.authorization.replace('Bearer ', '')
+            } catch (err) {
+                res.status(401)
+                res.end()
+            }
+            const user = (JSON.parse(Buffer.from(token, 'base64').toString('utf-8')))
+            if (user.exp > moment().unix()) {
+                //consultar si se coincide con el registro de base de datos
+                const conn = await db.createConnection()
+                if (!conn) {
+                    res.status(500)
+                    res.end()
+                }
+                var { status, result } = await conn.read('users',
+                    ["fname", "lname", "identity", "nickname", "id"],
+                    ` token = "${token}" and id = "${user.id}"`
+                )
+
+                if (status != 200) {
+                    res.status(401)
+                    res.end()
+                }
+                next()
+            } else {
+                res.status(401)
+                res.end()
+            }
+        } else {
+            res.status(401)
+            res.end()
+        }
+    }
 }

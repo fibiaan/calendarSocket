@@ -141,6 +141,26 @@ class database extends data {
         return { status: 200, result }
     }
 
+    async freeQuery(query, values) {
+        var result = undefined
+        try {
+            result = await new Promise((resolve, reject) => {
+                this.con.query(query, [...values], (err, res) => {
+                    if (err) reject(new Error(err.sqlMessage))
+                    resolve(res)
+                })
+            })
+        } catch (err) {
+            console.log('err', err.message)
+            return { status: 500 }
+        }
+        if (result.length == 0) {
+            return { status: 204 }
+        }
+
+        return { status: 200, result }
+    }
+
     async update(table, setters, condition = undefined) {
         var { update } = this.dataUpdater(setters)
         var result;
